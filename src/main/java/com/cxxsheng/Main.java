@@ -1,5 +1,7 @@
 package com.cxxsheng;
 
+import com.cxxsheng.util.JsonUtils;
+import com.cxxsheng.util.Logger;
 import soot.*;
 import soot.options.Options;
 
@@ -33,7 +35,7 @@ public class Main {
 
 
 
-    private static final String TARGET_CLASS = "com.android.server.notification.NotificationManagerService";
+//    private static final String TARGET_CLASS = "com.android.server.notification.NotificationManagerService";
     private static final String FRAMEWORK = "/Users/cxxsheng/someFramework/aosp14/framework.apk";
 
     private static final  String androidJarPath = "/Users/cxxsheng/Library/Android/sdk/platforms/android-34/android.jar";
@@ -81,11 +83,11 @@ public class Main {
                     stubClass = filterImp;
             }
 
-//            System.out.println(managerInterface + ":\n\t" + (defaultClass != null ? defaultClass.getName() : "null") + " | " + (proxyClass != null ? proxyClass.getName() : "null") + " | " + (stubClass != null ? stubClass.getName() : "null"));
+            Logger.info("Found default/proxy/stub: " + managerInterface + ":\n\t" + (defaultClass != null ? defaultClass.getName() : "null") + " | " + (proxyClass != null ? proxyClass.getName() : "null") + " | " + (stubClass != null ? stubClass.getName() : "null"));
 
-            // default ？
-            //   if (defaultClass != null)
-            //        System.out.println(hierarchy.getDirectSubclassesOf(defaultClass));
+//             default ？
+            if (defaultClass != null && !hierarchy.getDirectSubclassesOf(defaultClass).isEmpty())
+                Logger.info("There are some default subclasses: " + hierarchy.getDirectSubclassesOf(defaultClass));
 
             if (proxyClass != null && stubClass != null) {
 
@@ -94,9 +96,8 @@ public class Main {
                     SootClass realService = mayRealServices.getFirst();
                     if (realService.isAbstract())
                     {
-                        System.out.println("realService is abstract: " + realService);
+                        Logger.info("realService is abstract: " + realService);
                     }else {
-
                         ServiceInfo serviceInfo = new ServiceInfo(
                                 managerInterface.getName(),
                                 realService.getName()
@@ -110,20 +111,25 @@ public class Main {
                                 continue;
 
                             SootMethod targetMethod = realService.getMethod(methodSubSignature);
+
+                            if (targetMethod.toString().contains("android.os.Bundle")){
+                                Logger.info("TargetMethod has a Bundle Param: " + managerMethod + "/" + targetMethod);
+                            }
+
                             serviceInfo.methods.add(new MethodPair(
                                     managerMethod.toString(),
                                     targetMethod.toString()
                             ));
 
                         }
-
                         services.add(serviceInfo);
                     }
 
                 }else if (mayRealServices.isEmpty()){
                     //do nothing
+                    Logger.info("Can't find any implementations for " + managerInterface);
                 }else {
-                    System.out.println("More than one proxy implementation found for " + managerInterface.getName());
+                    Logger.info("More than one proxy implementation found for " + managerInterface.getName() + ", list: " + mayRealServices);
                 }
 
             }
