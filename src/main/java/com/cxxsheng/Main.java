@@ -1,12 +1,17 @@
 package com.cxxsheng;
 
+import com.cxxsheng.sootcore.MethodHandler;
+import com.cxxsheng.sootcore.StringUtil;
 import com.cxxsheng.util.JsonUtils;
 import com.cxxsheng.util.Logger;
 import soot.*;
+import soot.jimple.InvokeStmt;
 import soot.options.Options;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Main {
 
@@ -44,31 +49,90 @@ public class Main {
 
     private static final List<String> SKIP_MATCH_METHODS = new ArrayList<>();
 
+    private static Hierarchy hierarchy;
+
+
+    private final static List<String> targetParcelables = new ArrayList<>();
+
+    private static boolean isSystemAPI(SootMethod serviceTarget){
+        Body body = serviceTarget.retrieveActiveBody();
+        UnitPatchingChain units = body.getUnits();
+        for (Unit unit : units) {
+            System.out.println(unit);
+        }
+
+        return false;
+    }
     // make sure class has this interface, for instance: class a implement interfaceClass; class b extends a;
     // class b should be filtered out
-    private static List<SootClass> enforceHasInterface(List<SootClass> classes, SootClass interfaceClass){
+    private static List<SootClass> enforceHasInterface(List<SootClass> classes, SootClass interfaceClass, boolean filterAbstract){
         List<SootClass> filterClasses = new ArrayList<>();
-        for (SootClass sootClass : classes){
-            if(sootClass.getInterfaces().contains(interfaceClass)){
-                filterClasses.add(sootClass);
+        for (SootClass sootClass : classes) {
+            if (sootClass.getInterfaces().contains(interfaceClass)) {
+                if (!filterAbstract || !sootClass.isAbstract()) {
+                    filterClasses.add(sootClass);
+                }
             }
         }
         return filterClasses;
     }
 
+
+
+    private static SootMethod tryToFindWriteToParcel(SootClass sootClass){
+        SootMethod writeToParcel = sootClass.getMethodUnsafe("void writeToParcel(android.os.Parcel,int)");
+        if ( writeToParcel == null)
+            while (true){
+                sootClass = sootClass.getSuperclass();
+                if (sootClass == null)
+                    break;
+                writeToParcel = sootClass.getMethodUnsafe("void writeToParcel(android.os.Parcel,int)");
+                if (writeToParcel != null)
+                    break;
+            }
+        return writeToParcel;
+    }
+
+    private static Set<String> getAllBundleParcelable(){
+        Set<String> allTypes = new HashSet<>();
+        SootClass parcelableInterface = Scene.v().getSootClass("android.os.Parcelable");
+        List<SootClass> classes = hierarchy.getImplementersOf(parcelableInterface);
+        classes = enforceHasInterface(classes, parcelableInterface, true);
+        for (SootClass clazz : classes){
+            SootMethod writeToParcel = tryToFindWriteToParcel(clazz);
+            if (writeToParcel == null){
+                throw new RuntimeException(clazz.toString());
+            }
+
+
+            MethodHandler handler = new MethodHandler(writeToParcel, true);
+            handler.setInvokeCallback( unit -> {
+                InvokeStmt invoke = (InvokeStmt) unit;
+                if (invoke.getInvokeExpr().getMethod().getName().contains("writeBundle"))
+                    allTypes.add(clazz.getName());
+            });
+
+            handler.addHitString("android.os.Parcel");
+            handler.run();
+
+        }
+
+        allTypes.add("android.os.Bundle");
+        return allTypes;
+    }
+
     private static void startAnalysis() {
+        Set<String> allBundleParcelable = getAllBundleParcelable();
+
         List<ServiceInfo> services = new ArrayList<>();
-
-
 
         SootClass iInterface = Scene.v().getSootClass(IINTERFACE);
 
-        Hierarchy hierarchy = Scene.v().getActiveHierarchy();
         //managerInterface is the first layer of aidl wrapped class
         List<SootClass> managerInterfaces = hierarchy.getSubinterfacesOf(iInterface);
         for (SootClass managerInterface : managerInterfaces) {
             List<SootClass> allImps =  hierarchy.getDirectImplementersOf(managerInterface);
-            List<SootClass> filterImps = enforceHasInterface(allImps, managerInterface);
+            List<SootClass> filterImps = enforceHasInterface(allImps, managerInterface, false);
 
             SootClass defaultClass = null;
             SootClass proxyClass = null;
@@ -112,8 +176,10 @@ public class Main {
 
                             SootMethod targetMethod = realService.getMethod(methodSubSignature);
 
-                            if (targetMethod.toString().contains("android.os.Bundle")){
+                            if (StringUtil.listContains(allBundleParcelable, targetMethod.getParameterTypes())){
                                 Logger.info("TargetMethod has a Bundle Param: " + managerMethod + "/" + targetMethod);
+                                boolean ret = isSystemAPI(targetMethod);
+
                             }
 
                             serviceInfo.methods.add(new MethodPair(
@@ -169,7 +235,11 @@ public class Main {
 
         Scene.v().loadNecessaryClasses();// may take dozens of seconds
 
+        hierarchy = Scene.v().getActiveHierarchy();;
+
     }
+
+
 
     public static void main(String[] args) {
         if (args.length != 1) {
@@ -186,6 +256,8 @@ public class Main {
 
     private static void initParams() {
         SKIP_MATCH_METHODS.add("void <clinit>()");
+
+
     }
 
     private static void forTest(){
