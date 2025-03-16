@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.File;
 import java.io.IOException;
 
-public class JsonUtils {
+public class JsonUtil {
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final DefaultPrettyPrinter printer = new DefaultPrettyPrinter();
 

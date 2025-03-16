@@ -5,12 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4f8cbc7c-d548-4bd9-85bc-689451e66021" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/sootcore/MethodHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/sootcore/StringUtil.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/sootcore/UnitCallback.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/permission/Permission.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/permission/PermissionParser.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/util/FileWriter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/android_manifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/output.log" beforeDir="false" afterPath="$PROJECT_DIR$/output.log" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/cxxsheng/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/cxxsheng/sootcore/MethodHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/sootcore/MethodHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/cxxsheng/sootcore/StringUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/util/StringUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/cxxsheng/sootcore/UnitCallback.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/sootcore/UnitCallback.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/cxxsheng/util/JsonUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/cxxsheng/util/JsonUtil.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,7 +47,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Application.Main.executor": "Debug",
+    "Application.Main.executor": "Run",
     "Application.com.cxxsheng.Main.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
@@ -105,7 +110,8 @@
       <workItem from="1741851012452" duration="4675000" />
       <workItem from="1741861949415" duration="1482000" />
       <workItem from="1741864386757" duration="10173000" />
-      <workItem from="1741930500340" duration="16859000" />
+      <workItem from="1741930500340" duration="17707000" />
+      <workItem from="1742019686395" duration="15617000" />
     </task>
     <servers />
   </component>
@@ -113,26 +119,9 @@
     <option name="version" value="3" />
   </component>
   <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <condition expression="invoke.getInvokeExpr().getMethod().toString().contains(&quot;Bundle&quot;)" language="JAVA" custom="soot.jimple.parser.node.PInvokeExpr" />
-          <url>file://$PROJECT_DIR$/src/main/java/com/cxxsheng/Main.java</url>
-          <line>110</line>
-          <option name="timeStamp" value="16" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
     <watches-manager>
       <configuration name="Application">
         <watch expression="Scene.v().getSootClass(&quot;com.android.server.notification.NotificationManagerService$11&quot;)" language="JAVA" />
-        <watch expression="hierarchy.getSubinterfacesOfIncluding(INotificationManager)" language="JAVA" />
-        <watch expression="hierarchy.getImplementersOf(INotificationManager)" language="JAVA" />
-        <watch expression="hierarchy.getDirectImplementersOf(INotificationManager)" language="JAVA" />
-        <watch expression="clazz.getMethodByName(&quot;writeToParcel&quot;).getSubSignature()" language="JAVA" />
-        <watch expression="clazz.getMethod(&quot;void writeToParcel(android.os.Parcel,int)&quot;)" language="JAVA" />
-        <watch expression="method.retrieveActiveBody().getUnits()" language="JAVA" />
-        <watch expression="isHit(targetMethod)" language="JAVA" />
       </configuration>
     </watches-manager>
   </component>

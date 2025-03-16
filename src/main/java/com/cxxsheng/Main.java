@@ -1,20 +1,23 @@
 package com.cxxsheng;
 
+import com.cxxsheng.permission.PermissionParser;
 import com.cxxsheng.sootcore.MethodHandler;
-import com.cxxsheng.sootcore.StringUtil;
-import com.cxxsheng.util.JsonUtils;
+import com.cxxsheng.util.FileWriter;
+import com.cxxsheng.util.JsonUtil;
 import com.cxxsheng.util.Logger;
+import com.cxxsheng.util.StringUtil;
 import soot.*;
 import soot.jimple.InvokeStmt;
 import soot.options.Options;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.io.IOException;
+import java.util.*;
+
 
 public class Main {
 
+
+    private static PermissionParser parser;
 
     private static class MethodPair {
         public String interfaceMethod;
@@ -54,14 +57,29 @@ public class Main {
 
     private final static List<String> targetParcelables = new ArrayList<>();
 
+    //fixme not safe!
     private static boolean isSystemAPI(SootMethod serviceTarget){
-        Body body = serviceTarget.retrieveActiveBody();
-        UnitPatchingChain units = body.getUnits();
-        for (Unit unit : units) {
-            System.out.println(unit);
+        MethodHandler handler = new MethodHandler(serviceTarget, true);
+        Set<String> allPermissions = new HashSet<>();
+        handler.setUnitCallback( (_, raw, _) -> {
+            if (raw.toString().contains("android.permission.")){
+                allPermissions.addAll(StringUtil.extractPermissions(raw.toString()));
+            }
+
+        });
+        handler.run();
+        System.out.println(serviceTarget.toString() + "\n\trequirePermission=" + allPermissions);
+        boolean requireSystem = false;
+        for (String permission : allPermissions) {
+            if (parser.isSystemPermission(permission)){
+                requireSystem = true;
+                break;
+            }
         }
 
-        return false;
+        System.out.println("\trequireSystem=" + requireSystem);
+
+        return  requireSystem;
     }
     // make sure class has this interface, for instance: class a implement interfaceClass; class b extends a;
     // class b should be filtered out
@@ -94,7 +112,7 @@ public class Main {
     }
 
     private static Set<String> getAllBundleParcelable(){
-        Set<String> allTypes = new HashSet<>();
+        Map<String, String> allTypes = new HashMap<>();
         SootClass parcelableInterface = Scene.v().getSootClass("android.os.Parcelable");
         List<SootClass> classes = hierarchy.getImplementersOf(parcelableInterface);
         classes = enforceHasInterface(classes, parcelableInterface, true);
@@ -106,10 +124,10 @@ public class Main {
 
 
             MethodHandler handler = new MethodHandler(writeToParcel, true);
-            handler.setInvokeCallback( unit -> {
+            handler.setInvokeCallback((who, _, unit) -> {
                 InvokeStmt invoke = (InvokeStmt) unit;
                 if (invoke.getInvokeExpr().getMethod().getName().contains("writeBundle"))
-                    allTypes.add(clazz.getName());
+                    allTypes.put(clazz.getName(), who.toString());
             });
 
             handler.addHitString("android.os.Parcel");
@@ -117,11 +135,27 @@ public class Main {
 
         }
 
-        allTypes.add("android.os.Bundle");
-        return allTypes;
+        allTypes.putIfAbsent("android.os.Bundle", null);
+
+        StringBuilder sb = new StringBuilder("********************************\n");
+        sb.append("All Bundle Parcelable Types:\n");
+        for (Map.Entry<String, String> entry : allTypes.entrySet()) {
+            sb.append("Class: ").append(entry.getKey());
+            if (entry.getValue() != null) {
+                sb.append(" -> ").append(entry.getValue());
+            }
+            sb.append("\n");
+        }
+        sb.append("********************************");
+
+        Logger.info(sb.toString());
+        return allTypes.keySet();
     }
 
     private static void startAnalysis() {
+
+        FileWriter writer = new FileWriter("target.list");
+
         Set<String> allBundleParcelable = getAllBundleParcelable();
 
         List<ServiceInfo> services = new ArrayList<>();
@@ -178,8 +212,8 @@ public class Main {
 
                             if (StringUtil.listContains(allBundleParcelable, targetMethod.getParameterTypes())){
                                 Logger.info("TargetMethod has a Bundle Param: " + managerMethod + "/" + targetMethod);
-                                boolean ret = isSystemAPI(targetMethod);
-
+//                                boolean ret = isSystemAPI(targetMethod);
+                                writer.writeLine(managerMethod + " / " + targetMethod);
                             }
 
                             serviceInfo.methods.add(new MethodPair(
@@ -202,8 +236,8 @@ public class Main {
 
         }
 
-        JsonUtils.writeToJsonFile(services, "services_analysis.json");
-
+        JsonUtil.writeToJsonFile(services, "services_analysis.json");
+        writer.close();
     }
 
     private static void initializeSoot(String jarTargetPath) {
@@ -256,8 +290,12 @@ public class Main {
 
     private static void initParams() {
         SKIP_MATCH_METHODS.add("void <clinit>()");
-
-
+        parser = new PermissionParser("android_manifest.xml");
+        try {
+            parser.parse();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static void forTest(){

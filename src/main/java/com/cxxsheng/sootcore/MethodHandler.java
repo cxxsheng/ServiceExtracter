@@ -1,6 +1,6 @@
 package com.cxxsheng.sootcore;
 
-import soot.SootClass;
+import com.cxxsheng.util.StringUtil;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -54,9 +54,9 @@ public class MethodHandler {
     }
 
 
-    private void handleInvoke(InvokeStmt invokeStmt) {
+    private void handleInvoke(SootMethod who, Unit rawUnit,  InvokeStmt invokeStmt) {
         if (invokeCallback != null) {
-            invokeCallback.handle(invokeStmt);
+            invokeCallback.handle(who, rawUnit, invokeStmt);
         }
 
         if (!runRecurive)
@@ -79,14 +79,14 @@ public class MethodHandler {
         for(Unit unit : method.retrieveActiveBody().getUnits()){
 
             if (unitCallback != null) {
-                unitCallback.handle(unit);
+                unitCallback.handle(method, unit, unit);
             }
             if (unit instanceof InvokeStmt){
-                handleInvoke((InvokeStmt) unit);
+                handleInvoke(method, unit, (InvokeStmt) unit);
             }else if (unit instanceof AssignStmt){
                 Value v =  ((AssignStmt) unit).getRightOp();
                 if (v instanceof InvokeStmt){
-                    handleInvoke((InvokeStmt) v);
+                    handleInvoke(method, unit, (InvokeStmt) v);
                 }
             }
         }
