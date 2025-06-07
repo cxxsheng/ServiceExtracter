@@ -2,10 +2,7 @@ package com.cxxsheng;
 
 import com.cxxsheng.permission.PermissionParser;
 import com.cxxsheng.sootcore.MethodHandler;
-import com.cxxsheng.util.FileWriter;
-import com.cxxsheng.util.JsonUtil;
-import com.cxxsheng.util.Logger;
-import com.cxxsheng.util.StringUtil;
+import com.cxxsheng.util.*;
 import soot.*;
 import soot.jimple.InvokeStmt;
 import soot.options.Options;
@@ -158,6 +155,9 @@ public class Main {
 
         Set<String> allBundleParcelable = getAllBundleParcelable();
 
+        AppsharkRuleGenerator generator = new AppsharkRuleGenerator("input.json", "output.json", allBundleParcelable);
+
+
         List<ServiceInfo> services = new ArrayList<>();
 
         SootClass iInterface = Scene.v().getSootClass(IINTERFACE);
@@ -210,10 +210,11 @@ public class Main {
 
                             SootMethod targetMethod = realService.getMethod(methodSubSignature);
 
+
                             if (StringUtil.listContains(allBundleParcelable, targetMethod.getParameterTypes())){
                                 Logger.info("TargetMethod has a Bundle Param: " + managerMethod + "/" + targetMethod);
-//                                boolean ret = isSystemAPI(targetMethod);
                                 writer.writeLine(managerMethod + " / " + targetMethod);
+                                generator.addEntryAndImp(new Pair<>(managerMethod, targetMethod));
                             }
 
                             serviceInfo.methods.add(new MethodPair(
@@ -237,6 +238,7 @@ public class Main {
         }
 
         JsonUtil.writeToJsonFile(services, "services_analysis.json");
+        generator.generate();
         writer.close();
     }
 
@@ -297,12 +299,26 @@ public class Main {
             throw new RuntimeException(e);
         }
     }
-
+    private static void printSootClass(SootClass sc){
+        System.out.println("**************");
+        System.out.println(sc.toString());
+        for (SootMethod method : sc.getMethods()) {
+            if (method.isConcrete()) {
+                System.out.println(method.retrieveActiveBody());
+            }
+        }
+    }
     private static void forTest(){
-        SootClass INotificationManager = Scene.v().getSootClass("android.app.INotificationManager");
+        SootClass INotificationManager = Scene.v().getSootClass("com.android.settings.homepage.SettingsHomepageActivity");
         Hierarchy hierarchy = Scene.v().getActiveHierarchy();
 //        List<SootClass> sootClasses = hierarchy.getDirectSubclassesOf(INotificationManager);
-        SootClass a = Scene.v().getSootClass("com.android.server.notification.NotificationManagerService$11");
+        SootClass a = Scene.v().getSootClass("com.android.settings.SettingsActivity");
+        printSootClass(a);
+//        a = Scene.v().getSootClass("com.android.server.notification.NotificationManagerService$PostNotificationRunnable");
+//        printSootClass(a);
+//        a = Scene.v().getSootClass("com.android.server.notification.NotificationManagerService$EnqueueNotificationRunnable");
+//        printSootClass(a);
+
         System.out.println();
     }
 }
